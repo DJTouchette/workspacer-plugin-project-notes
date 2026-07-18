@@ -6,7 +6,7 @@ A [workspacer](https://github.com/DJTouchette/workspacer) hub plugin (webview). 
 
 ## What it does
 
-Notes live in a single JSON file at the project root (`.workspacer-notes.json`), written through the hub's `fs.write` capability scoped to the agent's cwd — nothing outside the project is ever touched, and the notes travel with the directory (commit the file to share them, or gitignore it to keep them local).
+Notes live in a single JSON file inside the project at `.workspacer/plugins/project-notes/notes.json` (the conventional per-plugin data home; needs workspacer ≥ 0.137, whose `fs.write` creates missing parents), written through the hub's `fs.write` capability scoped to the agent's cwd — nothing outside the project is ever touched, and the notes travel with the directory (commit the file to share them, or gitignore it to keep them local).
 
 - **A notebook per project** — every agent (and every notes pane) in the same directory sees the same notes.
 - **Tags** — comma-separated per note; the sidebar builds filter chips from whatever tags exist.
@@ -22,7 +22,7 @@ Command palette → **Install Plugin…** → `DJTouchette/workspacer-plugin-pro
 
 | Capability | Scope | Why |
 |---|---|---|
-| `fs.read` | agent cwd | read `.workspacer-notes.json` |
+| `fs.read` | agent cwd | read `.workspacer/plugins/project-notes/notes.json` |
 | `fs.write` | agent cwd | save it |
 
 No events consumed, no network, no sidecar process.

@@ -142,7 +142,10 @@
   };
 
   // ── Store: one JSON file at the project root; last write wins. ──
-  const FILE = cwd + '/.workspacer-notes.json';
+  // Conventional per-plugin data home inside the project: every plugin gets
+  // its own namespace under .workspacer/plugins/. The host's fs.write creates
+  // missing parents (workspacer >= 0.137).
+  const FILE = cwd + '/.workspacer/plugins/project-notes/notes.json';
   let notes = [];        // [{id,title,content,tags,createdAt,updatedAt}]
   let selectedId = null;
   let query = '';
@@ -284,7 +287,7 @@
     const ed = $('editor');
     if (view !== 'preview') {
       const ta = document.createElement('textarea');
-      ta.id = 'ta'; ta.spellcheck = false; ta.placeholder = 'Write markdown… saved in the project (.workspacer-notes.json).';
+      ta.id = 'ta'; ta.spellcheck = false; ta.placeholder = 'Write markdown… saved in the project (.workspacer/plugins/project-notes/).';
       ta.value = n.content;
       ta.oninput = () => { n.content = ta.value; n.updatedAt = now(); persist(); if (view === 'split') updatePv(); };
       ta.onkeydown = (e) => {
