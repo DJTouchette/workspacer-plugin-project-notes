@@ -1,0 +1,18 @@
+{
+  "id": "djtouchette.project-notes",
+  "name": "Project Notes",
+  "apiVersion": "1",
+  "ui": "ui",
+  "panes": [
+    {
+      "type": "djtouchette.project-notes",
+      "title": "Notes",
+      "icon": "🗒️",
+      "scope": "agent"
+    }
+  ],
+  "capabilities": [
+    { "method": "fs.read", "paths": ["${agentCwd}"] },
+    { "method": "fs.write", "paths": ["${agentCwd}"] }
+  ]
+}

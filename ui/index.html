@@ -1,0 +1,340 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8" />
+<title>Project Notes</title>
+<style>
+  /* Colors are workspacer theme tokens (--wks-*), injected into plugin webviews
+     by the host; the fallbacks keep the page legible standalone. */
+  * { box-sizing: border-box; }
+  html, body { height: 100%; margin: 0; }
+  body {
+    display: flex;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: var(--wks-bg-base, #17171a);
+    color: var(--wks-text-primary, #dcdce6);
+    font-size: 13px;
+  }
+  /* ── Sidebar ── */
+  #side {
+    width: 220px; flex-shrink: 0; display: flex; flex-direction: column;
+    border-right: 1px solid var(--wks-border-subtle, #2a2a2a);
+    background: var(--wks-bg-raised, #1c1c20);
+  }
+  #side header { display: flex; align-items: center; gap: 6px; padding: 8px 10px 4px; }
+  #dir { flex: 1; min-width: 0; font-weight: 650; font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #new {
+    font-weight: 700; cursor: pointer; padding: 1px 8px; border-radius: 5px;
+    border: 1px solid var(--wks-border-subtle, #2a2a2a); background: transparent;
+    color: var(--wks-accent-text, #60a5fa); font-size: 12px;
+  }
+  #search {
+    margin: 2px 10px 6px; padding: 4px 8px; font-size: 11.5px; font-family: inherit;
+    background: var(--wks-bg-input, #141418); color: inherit; outline: none;
+    border: 1px solid var(--wks-border-subtle, #2a2a2a); border-radius: 5px;
+  }
+  #tagbar { display: flex; flex-wrap: wrap; gap: 4px; padding: 0 10px 8px; }
+  .chip {
+    font-size: 10.5px; font-weight: 600; padding: 1px 7px; border-radius: 999px;
+    border: 1px solid var(--wks-border-subtle, #2a2a2a); color: var(--wks-text-muted, #999);
+    cursor: pointer; white-space: nowrap; background: transparent; user-select: none;
+  }
+  .chip.static { cursor: default; }
+  .chip.on {
+    color: var(--wks-accent-text, #60a5fa);
+    border-color: color-mix(in srgb, var(--wks-accent, #5078c8) 45%, transparent);
+    background: color-mix(in srgb, var(--wks-accent, #5078c8) 12%, transparent);
+  }
+  #list { flex: 1; overflow-y: auto; }
+  .row { padding: 7px 10px; cursor: pointer; border-left: 2px solid transparent; }
+  .row.sel { border-left-color: var(--wks-accent, #5078c8); background: var(--wks-bg-selected, #2d303c); }
+  .row .t { display: flex; align-items: baseline; gap: 6px; font-size: 12px; font-weight: 600; }
+  .row .t span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .row .t time { font-size: 10.5px; color: var(--wks-text-faint, #777); flex-shrink: 0; font-weight: 400; }
+  .row .tags { display: flex; flex-wrap: wrap; gap: 3px; margin-top: 3px; }
+  .empty { padding: 14px 12px; font-size: 11.5px; color: var(--wks-text-faint, #777); }
+  /* ── Editor ── */
+  #main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+  #bar {
+    display: flex; align-items: center; gap: 8px; padding: 6px 10px;
+    border-bottom: 1px solid var(--wks-border-subtle, #2a2a2a);
+    background: var(--wks-bg-raised, #1c1c20);
+  }
+  #title {
+    flex: 1; min-width: 0; font-size: 13.5px; font-weight: 650; font-family: inherit;
+    background: transparent; color: inherit; border: none; outline: none;
+  }
+  #tags {
+    width: 180px; font-size: 11.5px; font-family: ui-monospace, monospace; padding: 3px 8px;
+    background: var(--wks-bg-input, #141418); color: var(--wks-text-secondary, #bbb);
+    border: 1px solid var(--wks-border-subtle, #2a2a2a); border-radius: 999px; outline: none;
+  }
+  .vbtn {
+    font-size: 11.5px; font-family: inherit; cursor: pointer; padding: 2px 8px;
+    border-radius: 4px; text-transform: capitalize; background: transparent;
+    border: 1px solid transparent; color: var(--wks-text-muted, #999);
+  }
+  .vbtn.on {
+    border-color: var(--wks-accent, #5078c8);
+    background: var(--wks-accent-bg, rgba(96,165,250,.15));
+    color: var(--wks-accent-text, #60a5fa);
+  }
+  #del { border: none; background: transparent; color: var(--wks-text-faint, #777); cursor: pointer; font-size: 12px; }
+  #del:hover { color: var(--wks-error, #f87171); }
+  #editor { display: flex; flex: 1; min-height: 0; }
+  #ta {
+    flex: 1; min-width: 0; border: none; outline: none; resize: none; padding: 10px 12px;
+    background: var(--wks-bg-input, #141418); color: inherit;
+    font-family: ui-monospace, monospace; font-size: 12.5px; line-height: 1.6;
+  }
+  #pv {
+    flex: 1; min-width: 0; overflow-y: auto; padding: 6px 14px;
+    border-left: 1px solid var(--wks-border-subtle, #2a2a2a);
+    color: var(--wks-text-secondary, #bbb); font-size: 13px; line-height: 1.55;
+  }
+  #pv h1, #pv h2, #pv h3 { color: var(--wks-text-primary, #dcdce6); margin: 10px 0 6px; }
+  #pv code { font-family: ui-monospace, monospace; font-size: 11.5px; background: var(--wks-bg-elevated, #222); padding: 1px 4px; border-radius: 3px; }
+  #pv pre { background: var(--wks-bg-elevated, #222); padding: 8px 10px; border-radius: 6px; overflow-x: auto; }
+  #pv pre code { background: transparent; padding: 0; }
+  #pv a { color: var(--wks-accent-text, #60a5fa); }
+  #blank { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; color: var(--wks-text-faint, #777); }
+  #blank button {
+    font-size: 12px; font-family: inherit; font-weight: 600; cursor: pointer; padding: 5px 14px;
+    border-radius: 6px; border: none; background: var(--wks-accent, #5078c8); color: #fff;
+  }
+  #status { font-size: 10.5px; color: var(--wks-text-faint, #777); padding: 0 6px; }
+</style>
+</head>
+<body>
+  <div id="side">
+    <header><span id="dir">Notes</span><button id="new" title="New note">＋</button></header>
+    <input id="search" placeholder="Search notes…" />
+    <div id="tagbar"></div>
+    <div id="list"></div>
+  </div>
+  <div id="main"></div>
+
+<script>
+(() => {
+  'use strict';
+  // ── Hub bus boilerplate (same shape as the editor example webview) ──
+  const params = new URLSearchParams(location.search);
+  const token = params.get('busToken') || '';
+  const cwd = (params.get('cwd') || '').replace(/[/\\]+$/, '');
+  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const ws = new WebSocket(`${proto}//${location.host}/bus?token=${encodeURIComponent(token)}`);
+  let seq = 1;
+  const pending = new Map();
+  function call(method, p = {}) {
+    return new Promise((resolve, reject) => {
+      const id = 'c' + seq++;
+      pending.set(id, { resolve, reject });
+      ws.send(JSON.stringify({ op: 'call', id, method, params: p }));
+    });
+  }
+  ws.onmessage = (ev) => {
+    let f; try { f = JSON.parse(ev.data); } catch { return; }
+    const c = f.id && pending.get(f.id);
+    if (!c) return;
+    pending.delete(f.id);
+    if (f.op === 'result') c.resolve(f.result);
+    else if (f.op === 'error') c.reject(new Error(f.error || 'error'));
+  };
+
+  // ── Store: one JSON file at the project root; last write wins. ──
+  const FILE = cwd + '/.workspacer-notes.json';
+  let notes = [];        // [{id,title,content,tags,createdAt,updatedAt}]
+  let selectedId = null;
+  let query = '';
+  let tagFilter = null;
+  let view = localStorage.getItem('pnView') === 'write' ? 'write'
+           : localStorage.getItem('pnView') === 'preview' ? 'preview' : 'split';
+
+  const uid = () => Math.random().toString(36).slice(2) + Date.now().toString(36);
+  const now = () => new Date().toISOString();
+  const esc = (s) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+  async function load() {
+    try {
+      const res = await call('fs.read', { path: FILE });
+      const doc = JSON.parse(typeof res === 'string' ? res : (res && res.contents) || '{}');
+      notes = Array.isArray(doc.notes) ? doc.notes.filter((n) => n && n.id) : [];
+    } catch { notes = []; } // no file yet — empty notebook
+  }
+  let saveTimer = null;
+  function persist() {
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(flush, 500);
+  }
+  function flush() {
+    clearTimeout(saveTimer); saveTimer = null;
+    call('fs.write', { path: FILE, contents: JSON.stringify({ version: 1, notes }, null, 2) + '\n' })
+      .then(() => setStatus('saved'))
+      .catch((e) => setStatus('save failed: ' + e.message));
+  }
+  window.addEventListener('blur', () => { if (saveTimer) flush(); });
+
+  // ── Tiny markdown renderer: headings, bold/italic, code, fences, lists, links. ──
+  function md(src) {
+    const lines = src.split('\n');
+    let html = '', inCode = false, inList = false;
+    const inline = (t) => esc(t)
+      .replace(/`([^`]+)`/g, '<code>$1</code>')
+      .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+      .replace(/\*([^*]+)\*/g, '<i>$1</i>')
+      .replace(/\[([^\]]+)\]\((https?:[^)\s]+)\)/g, '<a href="$2" target="_blank" rel="noreferrer">$1</a>');
+    for (const line of lines) {
+      if (line.trim().startsWith('```')) {
+        if (inList) { html += '</ul>'; inList = false; }
+        html += inCode ? '</code></pre>' : '<pre><code>';
+        inCode = !inCode; continue;
+      }
+      if (inCode) { html += esc(line) + '\n'; continue; }
+      const h = line.match(/^(#{1,3})\s+(.*)/);
+      const li = line.match(/^\s*[-*]\s+(.*)/);
+      if (li && !inList) { html += '<ul>'; inList = true; }
+      if (!li && inList) { html += '</ul>'; inList = false; }
+      if (h) html += `<h${h[1].length}>${inline(h[2])}</h${h[1].length}>`;
+      else if (li) html += `<li>${inline(li[1])}</li>`;
+      else if (line.trim() === '') html += '<br/>';
+      else html += `<p style="margin:4px 0">${inline(line)}</p>`;
+    }
+    if (inList) html += '</ul>';
+    if (inCode) html += '</code></pre>';
+    return html;
+  }
+
+  const relTime = (iso) => {
+    const m = Math.floor((Date.now() - Date.parse(iso)) / 60000);
+    if (m < 1) return 'now';
+    if (m < 60) return m + 'm';
+    if (m < 1440) return Math.floor(m / 60) + 'h';
+    return Math.floor(m / 1440) + 'd';
+  };
+
+  // ── Rendering ──
+  const $ = (id) => document.getElementById(id);
+  const sel = () => notes.find((n) => n.id === selectedId) || null;
+
+  function visibleNotes() {
+    const q = query.trim().toLowerCase();
+    return notes
+      .filter((n) => !tagFilter || n.tags.includes(tagFilter))
+      .filter((n) => !q || n.title.toLowerCase().includes(q) ||
+        n.content.toLowerCase().includes(q) || n.tags.some((t) => t.includes(q)))
+      .sort((a, b) => (a.updatedAt < b.updatedAt ? 1 : -1));
+  }
+
+  function renderSide() {
+    $('dir').textContent = cwd ? cwd.split(/[/\\]/).pop() : 'Notes';
+    $('dir').title = cwd;
+    const tags = [...new Set(notes.flatMap((n) => n.tags))].sort();
+    $('tagbar').innerHTML = tags.map((t) =>
+      `<span class="chip${t === tagFilter ? ' on' : ''}" data-tag="${esc(t)}">${esc(t)}</span>`).join('');
+    for (const el of $('tagbar').querySelectorAll('.chip')) {
+      el.onclick = () => { tagFilter = tagFilter === el.dataset.tag ? null : el.dataset.tag; renderSide(); };
+    }
+    const vis = visibleNotes();
+    $('list').innerHTML = vis.length === 0
+      ? `<div class="empty">${notes.length === 0 ? 'No notes for this project yet.' : 'No notes match the filter.'}</div>`
+      : vis.map((n) => `
+        <div class="row${n.id === selectedId ? ' sel' : ''}" data-id="${n.id}">
+          <div class="t"><span>${esc(n.title || 'Untitled')}</span><time>${relTime(n.updatedAt)}</time></div>
+          ${n.tags.length ? `<div class="tags">${n.tags.map((t) => `<span class="chip static">${esc(t)}</span>`).join('')}</div>` : ''}
+        </div>`).join('');
+    for (const el of $('list').querySelectorAll('.row')) {
+      el.onclick = () => { selectedId = el.dataset.id; renderSide(); renderMain(); };
+    }
+  }
+
+  function renderMain() {
+    const n = sel();
+    const main = $('main');
+    if (!n) {
+      main.innerHTML = `<div id="blank"><span>No note selected.</span><button id="blanknew">＋ New note</button></div>`;
+      $('blanknew').onclick = createNote;
+      return;
+    }
+    main.innerHTML = `
+      <div id="bar">
+        <input id="title" placeholder="Title" />
+        <input id="tags" placeholder="tags, comma, separated" title="Tags — comma separated" />
+        ${['write', 'split', 'preview'].map((v) =>
+          `<button class="vbtn${view === v ? ' on' : ''}" data-v="${v}">${v}</button>`).join('')}
+        <span id="status"></span>
+        <button id="del" title="Delete note">✕</button>
+      </div>
+      <div id="editor"></div>`;
+    $('title').value = n.title;
+    $('tags').value = n.tags.join(', ');
+    $('title').oninput = () => { n.title = $('title').value; n.updatedAt = now(); persist(); renderSide(); };
+    $('tags').oninput = () => {
+      n.tags = $('tags').value.split(',').map((t) => t.trim().toLowerCase()).filter(Boolean);
+      n.updatedAt = now(); persist();
+    };
+    $('tags').onblur = () => renderSide();
+    for (const el of main.querySelectorAll('.vbtn')) {
+      el.onclick = () => { view = el.dataset.v; localStorage.setItem('pnView', view); renderMain(); };
+    }
+    $('del').onclick = () => {
+      notes = notes.filter((x) => x.id !== n.id);
+      selectedId = notes.length ? visibleNotes()[0]?.id ?? null : null;
+      persist(); renderSide(); renderMain();
+    };
+    const ed = $('editor');
+    if (view !== 'preview') {
+      const ta = document.createElement('textarea');
+      ta.id = 'ta'; ta.spellcheck = false; ta.placeholder = 'Write markdown… saved in the project (.workspacer-notes.json).';
+      ta.value = n.content;
+      ta.oninput = () => { n.content = ta.value; n.updatedAt = now(); persist(); if (view === 'split') updatePv(); };
+      ta.onkeydown = (e) => {
+        if (e.key !== 'Tab') return;
+        e.preventDefault();
+        const s = ta.selectionStart, epos = ta.selectionEnd;
+        ta.value = ta.value.slice(0, s) + '  ' + ta.value.slice(epos);
+        ta.selectionStart = ta.selectionEnd = s + 2;
+        ta.oninput();
+      };
+      ed.appendChild(ta);
+    }
+    if (view !== 'write') {
+      const pv = document.createElement('div');
+      pv.id = 'pv';
+      if (view === 'preview') pv.style.borderLeft = 'none';
+      ed.appendChild(pv);
+      updatePv();
+    }
+    function updatePv() {
+      const pv = $('pv');
+      if (pv) pv.innerHTML = n.content.trim() ? md(n.content) : '<i style="color:var(--wks-text-disabled,#666)">Nothing to preview yet.</i>';
+    }
+  }
+
+  function setStatus(t) {
+    const el = $('status');
+    if (!el) return;
+    el.textContent = t;
+    setTimeout(() => { if (el.textContent === t) el.textContent = ''; }, 1500);
+  }
+
+  function createNote() {
+    const n = { id: uid(), title: 'Untitled', content: '', tags: tagFilter ? [tagFilter] : [], createdAt: now(), updatedAt: now() };
+    notes.push(n);
+    selectedId = n.id;
+    persist(); renderSide(); renderMain();
+    const t = $('title'); if (t) { t.focus(); t.select(); }
+  }
+
+  $('new').onclick = createNote;
+  $('search').oninput = () => { query = $('search').value; renderSide(); };
+
+  ws.onopen = async () => {
+    await load();
+    selectedId = visibleNotes()[0]?.id ?? null;
+    renderSide(); renderMain();
+  };
+  ws.onclose = () => setStatus('bus disconnected');
+})();
+</script>
+</body>
+</html>
