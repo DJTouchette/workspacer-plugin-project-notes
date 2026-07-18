@@ -141,7 +141,7 @@
     else if (f.op === 'error') c.reject(new Error(f.error || 'error'));
   };
 
-  // ── Store: one JSON file at the project root; last write wins. ──
+  // ── Store: one JSON file per project; last write wins. ──
   // Conventional per-plugin data home inside the project: every plugin gets
   // its own namespace under .workspacer/plugins/. The host's fs.write creates
   // missing parents (workspacer >= 0.137).
