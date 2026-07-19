@@ -117,29 +117,12 @@
 <script>
 (() => {
   'use strict';
-  // ── Hub bus boilerplate (same shape as the editor example webview) ──
+  // ── Bus via the host-injected SDK: window.workspacer owns the socket,
+  //    subscribe, reconnect, and the call/publish/on framing. ──
   const params = new URLSearchParams(location.search);
-  const token = params.get('busToken') || '';
   const cwd = (params.get('cwd') || '').replace(/[/\\]+$/, '');
-  const proto = location.protocol === 'https:' ? 'wss:' : 'ws:';
-  const ws = new WebSocket(`${proto}//${location.host}/bus?token=${encodeURIComponent(token)}`);
-  let seq = 1;
-  const pending = new Map();
-  function call(method, p = {}) {
-    return new Promise((resolve, reject) => {
-      const id = 'c' + seq++;
-      pending.set(id, { resolve, reject });
-      ws.send(JSON.stringify({ op: 'call', id, method, params: p }));
-    });
-  }
-  ws.onmessage = (ev) => {
-    let f; try { f = JSON.parse(ev.data); } catch { return; }
-    const c = f.id && pending.get(f.id);
-    if (!c) return;
-    pending.delete(f.id);
-    if (f.op === 'result') c.resolve(f.result);
-    else if (f.op === 'error') c.reject(new Error(f.error || 'error'));
-  };
+  const wks = window.workspacer;
+  const call = (method, p = {}) => wks.call(method, p);
 
   // ── Store: one JSON file per project; last write wins. ──
   // Conventional per-plugin data home inside the project: every plugin gets
@@ -331,12 +314,12 @@
   $('new').onclick = createNote;
   $('search').oninput = () => { query = $('search').value; renderSide(); };
 
-  ws.onopen = async () => {
+  wks.ready.then(async () => {
     await load();
     selectedId = visibleNotes()[0]?.id ?? null;
     renderSide(); renderMain();
-  };
-  ws.onclose = () => setStatus('bus disconnected');
+  });
+  wks.onStatus((on) => { if (!on) setStatus('bus disconnected'); });
 })();
 </script>
 </body>
