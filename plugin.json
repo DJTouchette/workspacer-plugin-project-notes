@@ -2,6 +2,7 @@
   "id": "djtouchette.project-notes",
   "name": "Project Notes",
   "apiVersion": "1",
+  "version": "1.0.0",
   "ui": "ui",
   "panes": [
     {
